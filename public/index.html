@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Viewer</title>
+  <style>
+    body {
+      margin: 0;
+      background: url('https://assets.science.nasa.gov/dynamicimage/assets/science/astro/universe/2023/09/swift_M31_mosaic_1600.webp') center center no-repeat;
+      background-size: cover;
+    }
+    #viewer-container {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+    }
+    .overlay-frame {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    #room-selector {
+      position: absolute;
+      top: 10px; left: 10px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewer-container">
+    <select id="room-selector">
+      <option value="">เลือกห้อง</option>
+    </select>
+    <canvas id="viewerCanvas"></canvas>
+    <img src="" class="overlay-frame" id="overlayImage" />
+  </div>
+  <script>
+    const canvas = document.getElementById('viewerCanvas');
+    const ctx = canvas.getContext('2d');
+    const roomSelector = document.getElementById('room-selector');
+    const overlay = document.getElementById('overlayImage');
+    const streams = {};
+
+    function drawStream(streamUrl) {
+      const img = new Image();
+      img.src = streamUrl + '?cacheBust=' + Date.now();
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        setTimeout(() => drawStream(streamUrl), 100);
+      };
+      img.onerror = () => setTimeout(() => drawStream(streamUrl), 1000);
+    }
+
+    roomSelector.addEventListener('change', () => {
+      const room = roomSelector.value;
+      if (streams[room]) {
+        drawStream(streams[room]);
+        overlay.src = "/overlays/" + room + ".png";
+      }
+    });
+
+    fetch('/rooms.json').then(r => r.json()).then(data => {
+      for (const room of data.rooms) {
+        streams[room] = `/streams/${room}`;
+        const option = document.createElement('option');
+        option.value = room;
+        option.textContent = room;
+        roomSelector.appendChild(option);
+      }
+    });
+  </script>
+</body>
+</html>
